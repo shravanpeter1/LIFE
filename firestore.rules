@@ -1,0 +1,51 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // User profiles and role-based data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/{profile=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Organization data (Publicly readable by any signed-in user)
+    match /hospitals/{hospitalId} {
+      allow read: if isSignedIn();
+      allow write: if false; 
+    }
+
+    match /blood_banks/{bloodBankId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+
+      match /inventory/{inventoryId} {
+        allow read: if isSignedIn();
+        allow write: if false;
+      }
+    }
+
+    // Collaboration entities: Emergency Cases
+    // Relaxed for the prototype to allow seamless real-time coordination
+    match /emergency_cases/{emergencyCaseId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Collaboration entities: Blood Requests
+    match /blood_requests/{bloodRequestId} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}
